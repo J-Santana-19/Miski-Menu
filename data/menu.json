@@ -5,10 +5,14 @@
     "slogan": "El sabor de lo tradicional hecho con amor",
     "story": "En Miski nacimos como un proyecto de familia con un propósito sencillo y honesto: hacer las cosas bien. Cuidamos cada ingrediente y respetamos los tiempos de nuestras recetas para hornear con la paciencia de lo artesanal. Cada pan, postre y café que preparamos lleva el cariño de nuestro hogar, pensado para acompañar tus mejores momentos con sabor y frescura de verdad.",
     "branches": [
-      "Mañanitas, Plaza los Pinos",
-      "La Siesta, Tocumen, Plaza Más",
+      "Mañanitas",
+      "Plaza los Pinos",
+      "La Siesta",
+      "Tocumen",
+      "Plaza Más",
       "Santa Isabel - Pacora",
-      "Chepo, Plaza 4 altos",
+      "Chepo",
+      "Plaza 4 altos",
       "San Francisco - Las Garzas",
       "Nuevo Tocumen - La Plaza 25"
     ],
@@ -55,7 +59,7 @@
     ],
     "whatsapp": "",
     "hours": "",
-    "instagram": "",
+    "instagram": "https://www.instagram.com/panaderiamiski?utm_source=ig_web_button_share_sheet&xtok=ZDNlZDc0MzIxNw==",
     "cakeNotice": "Encargos personalizados con diseño o Photocake: al menos 3 días de anticipación."
   },
   "categories": [
