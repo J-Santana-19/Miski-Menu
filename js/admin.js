@@ -2,10 +2,17 @@
   "use strict";
 
   const TOKEN_KEY = "miski_admin_token";
+  const GH_TOKEN_KEY = "miski_gh_token";
+  const GH_OWNER = "J-Santana-19";
+  const GH_REPO = "Miski-Menu";
+  const GH_BRANCH = "main";
   const channel = "BroadcastChannel" in window ? new BroadcastChannel("miski_menu_updates") : null;
 
   const state = {
+    mode: "local",
     token: sessionStorage.getItem(TOKEN_KEY) || "",
+    ghToken: localStorage.getItem(GH_TOKEN_KEY) || "",
+    ghMenuSha: "",
     data: null,
     search: "",
     categoryFilter: "all",
@@ -21,9 +28,14 @@
     loginScreen: document.getElementById("loginScreen"),
     adminApp: document.getElementById("adminApp"),
     loginForm: document.getElementById("loginForm"),
+    loginSubtitle: document.getElementById("loginSubtitle"),
+    localLoginFields: document.getElementById("localLoginFields"),
+    githubLoginFields: document.getElementById("githubLoginFields"),
     loginUser: document.getElementById("loginUser"),
     loginPass: document.getElementById("loginPass"),
+    loginGithubToken: document.getElementById("loginGithubToken"),
     loginError: document.getElementById("loginError"),
+    adminModeLabel: document.getElementById("adminModeLabel"),
     logoutBtn: document.getElementById("logoutBtn"),
     statTotal: document.getElementById("statTotal"),
     statActive: document.getElementById("statActive"),
@@ -110,7 +122,187 @@
     if (channel) channel.postMessage({ type: "updated", ts: Date.now() });
   }
 
+  function resolveAssetUrl(url) {
+    const raw = String(url || "");
+    return raw.startsWith("/assets/") ? `./${raw.slice(1)}` : raw;
+  }
+
+  function slugify(value) {
+    return String(value || "item")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || "item";
+  }
+
+  function utf8ToBase64(str) {
+    const bytes = new TextEncoder().encode(str);
+    let binary = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary);
+  }
+
+  function base64ToUtf8(b64) {
+    const binary = atob(String(b64 || "").replace(/\s+/g, ""));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder().decode(bytes);
+  }
+
+  async function ghApiFetch(apiPath, options = {}, tokenOverride = "") {
+    const token = tokenOverride || state.ghToken;
+    const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}${apiPath}`, {
+      ...options,
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      if (!tokenOverride) handleLogout();
+      throw new Error("Token de GitHub inválido o expirado.");
+    }
+    if (!res.ok) {
+      throw new Error(data.message || "Error al comunicarse con la API de GitHub.");
+    }
+    return data;
+  }
+
+  async function ghReadMenu() {
+    const file = await ghApiFetch(`/contents/data/menu.json?ref=${GH_BRANCH}&t=${Date.now()}`, { cache: "no-store" });
+    state.ghMenuSha = file.sha;
+    return JSON.parse(base64ToUtf8(file.content));
+  }
+
+  async function ghWriteMenu(data, message) {
+    const res = await ghApiFetch(`/contents/data/menu.json`, {
+      method: "PUT",
+      body: JSON.stringify({
+        message,
+        content: utf8ToBase64(JSON.stringify(data, null, 2)),
+        sha: state.ghMenuSha,
+        branch: GH_BRANCH,
+      }),
+    });
+    if (res?.content?.sha) {
+      state.ghMenuSha = res.content.sha;
+    }
+  }
+
+  async function ghDispatch(url, options = {}) {
+    const method = (options.method || "GET").toUpperCase();
+    const body = options.body ? JSON.parse(options.body) : {};
+
+    if (url === "/api/login" && method === "POST") {
+      const token = String(body.githubToken || "").trim();
+      if (!token) throw new Error("Ingresa tu Token de GitHub.");
+      const repo = await ghApiFetch("", {}, token);
+      if (!repo.permissions?.push) {
+        throw new Error("El token no tiene permiso de escritura (Contents: Read and write) en el repositorio.");
+      }
+      return { token };
+    }
+
+    if (url === "/api/auth/verify") {
+      const repo = await ghApiFetch("");
+      if (!repo.permissions?.push) throw new Error("Token sin permiso de escritura.");
+      return { ok: true };
+    }
+
+    if (url === "/api/logout") {
+      return { ok: true };
+    }
+
+    if (url === "/api/upload" && method === "POST") {
+      const dataUrl = String(body.dataUrl || "");
+      const match = dataUrl.match(/^data:image\/(webp|jpeg|jpg|png);base64,([A-Za-z0-9+/=]+)$/);
+      if (!match) throw new Error("Formato de imagen inválido");
+      const ext = match[1] === "jpeg" ? "jpg" : match[1];
+      const filename = `${Date.now()}-${slugify(body.filename || "producto")}.${ext}`;
+      await ghApiFetch(`/contents/assets/products/uploads/${filename}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          message: `Subir foto: ${filename}`,
+          content: match[2],
+          branch: GH_BRANCH,
+        }),
+      });
+      return { ok: true, url: `/assets/products/uploads/${filename}` };
+    }
+
+    const data = await ghReadMenu();
+
+    if (url === "/api/products" && method === "POST") {
+      if (!body.name) throw new Error("El nombre del producto es obligatorio");
+      let id = slugify(body.name);
+      while (data.products.some((p) => p.id === id)) {
+        id = `${slugify(body.name)}-${Math.floor(100 + Math.random() * 900)}`;
+      }
+      const product = { id, ...body };
+      data.products.push(product);
+      await ghWriteMenu(data, `Agregar producto: ${product.name}`);
+      return { ok: true, product };
+    }
+
+    const prodMatch = url.match(/^\/api\/products\/([^/]+)$/);
+    if (prodMatch) {
+      const id = decodeURIComponent(prodMatch[1]);
+      const idx = data.products.findIndex((p) => p.id === id);
+      if (idx === -1) throw new Error("Producto no encontrado");
+
+      if (method === "PUT") {
+        const updated = { ...data.products[idx], ...body, id };
+        if (!updated.name) throw new Error("El nombre del producto es obligatorio");
+        data.products[idx] = updated;
+        await ghWriteMenu(data, `Actualizar producto: ${updated.name}`);
+        return { ok: true, product: updated };
+      }
+
+      if (method === "DELETE") {
+        const [removed] = data.products.splice(idx, 1);
+        await ghWriteMenu(data, `Eliminar producto: ${removed.name}`);
+        return { ok: true, removedId: removed.id };
+      }
+    }
+
+    const toggleMatch = url.match(/^\/api\/products\/([^/]+)\/toggle$/);
+    if (toggleMatch && method === "PATCH") {
+      const id = decodeURIComponent(toggleMatch[1]);
+      const product = data.products.find((p) => p.id === id);
+      if (!product) throw new Error("Producto no encontrado");
+      product.active = product.active === false ? true : false;
+      await ghWriteMenu(data, `${product.active ? "Mostrar" : "Ocultar"} producto: ${product.name}`);
+      return { ok: true, product };
+    }
+
+    if (url === "/api/settings" && method === "PUT") {
+      if (body.whatsapp !== undefined) data.brand.whatsapp = String(body.whatsapp).trim();
+      if (body.hours !== undefined) data.brand.hours = String(body.hours).trim();
+      if (body.instagram !== undefined) data.brand.instagram = String(body.instagram).trim();
+      if (body.cakeNotice !== undefined) data.brand.cakeNotice = String(body.cakeNotice).trim();
+      if (Array.isArray(body.branches)) {
+        data.brand.branches = body.branches.map((b) => String(b).trim()).filter(Boolean);
+      }
+      await ghWriteMenu(data, "Actualizar datos del establecimiento");
+      return { ok: true, brand: data.brand };
+    }
+
+    throw new Error("Operación no soportada");
+  }
+
   async function apiFetch(url, options = {}) {
+    if (state.mode === "github") {
+      return ghDispatch(url, options);
+    }
     const headers = {
       "Content-Type": "application/json",
       ...(options.headers || {}),
@@ -133,6 +325,10 @@
   function showApp() {
     els.loginScreen.classList.add("hidden");
     els.adminApp.classList.remove("hidden");
+    if (els.adminModeLabel) {
+      els.adminModeLabel.textContent =
+        state.mode === "github" ? "Conectado a GitHub Pages" : "Gestión de Menú QR";
+    }
   }
 
   function showLogin() {
@@ -142,13 +338,19 @@
 
   function handleLogout() {
     state.token = "";
+    state.ghToken = "";
     sessionStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(GH_TOKEN_KEY);
     showLogin();
   }
 
   async function loadMenu() {
-    const res = await fetch(`/api/menu?t=${Date.now()}`, { cache: "no-store" });
-    state.data = await res.json();
+    if (state.mode === "github") {
+      state.data = await ghReadMenu();
+    } else {
+      const res = await fetch(`/api/menu?t=${Date.now()}`, { cache: "no-store" });
+      state.data = await res.json();
+    }
     populateCategorySelects();
     renderAdminList();
   }
@@ -214,7 +416,7 @@
         const cat = catMap[p.category] || { name: p.category, icon: "🥐" };
         const isActive = p.active !== false;
         const thumbHtml = p.image
-          ? `<img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" class="admin-thumb" />`
+          ? `<img src="${escapeHtml(resolveAssetUrl(p.image))}" alt="${escapeHtml(p.name)}" class="admin-thumb" />`
           : `<div class="admin-thumb">${escapeHtml(cat.icon)}</div>`;
 
         let priceControlHtml = "";
@@ -314,7 +516,7 @@
 
   function updatePhotoPreview(src) {
     if (src) {
-      els.photoPreviewFrame.innerHTML = `<img src="${escapeHtml(src)}" alt="Vista previa" />`;
+      els.photoPreviewFrame.innerHTML = `<img src="${escapeHtml(resolveAssetUrl(src))}" alt="Vista previa" />`;
       els.removePhotoBtn.classList.remove("hidden");
     } else {
       els.photoPreviewFrame.innerHTML = `<span class="no-photo-placeholder">Sin foto</span>`;
@@ -447,15 +649,25 @@
       e.preventDefault();
       els.loginError.classList.add("hidden");
       try {
-        const res = await apiFetch("/api/login", {
-          method: "POST",
-          body: JSON.stringify({
-            username: els.loginUser.value.trim(),
-            password: els.loginPass.value,
-          }),
-        });
-        state.token = res.token;
-        sessionStorage.setItem(TOKEN_KEY, res.token);
+        if (state.mode === "github") {
+          const ghToken = els.loginGithubToken.value.trim();
+          const res = await apiFetch("/api/login", {
+            method: "POST",
+            body: JSON.stringify({ githubToken: ghToken }),
+          });
+          state.ghToken = res.token;
+          localStorage.setItem(GH_TOKEN_KEY, res.token);
+        } else {
+          const res = await apiFetch("/api/login", {
+            method: "POST",
+            body: JSON.stringify({
+              username: els.loginUser.value.trim(),
+              password: els.loginPass.value,
+            }),
+          });
+          state.token = res.token;
+          sessionStorage.setItem(TOKEN_KEY, res.token);
+        }
         showApp();
         await loadMenu();
       } catch (err) {
@@ -736,9 +948,38 @@
     });
   }
 
+  async function detectMode() {
+    if (window.location.hostname.endsWith("github.io")) {
+      return "github";
+    }
+    try {
+      const res = await fetch("/api/menu", { method: "HEAD", cache: "no-store" });
+      if (res.ok) return "local";
+    } catch {
+      // Sin backend Node
+    }
+    return "github";
+  }
+
+  function applyLoginModeUI() {
+    const isGh = state.mode === "github";
+    els.localLoginFields.classList.toggle("hidden", isGh);
+    els.githubLoginFields.classList.toggle("hidden", !isGh);
+    els.loginUser.required = !isGh;
+    els.loginPass.required = !isGh;
+    els.loginGithubToken.required = isGh;
+    if (isGh && els.loginSubtitle) {
+      els.loginSubtitle.textContent =
+        "Modo GitHub Pages: los cambios se guardan directo en tu repositorio y se publican en ~1 minuto.";
+    }
+  }
+
   async function init() {
+    state.mode = await detectMode();
+    applyLoginModeUI();
     bindEvents();
-    if (!state.token) {
+    const activeToken = state.mode === "github" ? state.ghToken : state.token;
+    if (!activeToken) {
       showLogin();
       return;
     }

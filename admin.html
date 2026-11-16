@@ -9,25 +9,34 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/admin.css" />
+  <link rel="stylesheet" href="./css/admin.css" />
 </head>
 <body>
   <!-- Pantalla de Login -->
   <section class="login-screen" id="loginScreen">
     <div class="login-card">
-      <img src="/assets/brand/logo-marron.webp" alt="Logo Miski" class="login-logo" />
+      <img src="./assets/brand/logo-marron.webp" alt="Logo Miski" class="login-logo" />
       <span class="login-badge">Acceso Privado de Administración</span>
       <h1>Portal del Encargado</h1>
-      <p class="login-subtitle">Administra productos, precios, fotografías y disponibilidad del menú digital en tiempo real.</p>
+      <p class="login-subtitle" id="loginSubtitle">Administra productos, precios, fotografías y disponibilidad del menú digital en tiempo real.</p>
 
       <form id="loginForm" class="login-form">
-        <div class="field-group">
-          <label for="loginUser">Usuario o correo</label>
-          <input type="text" id="loginUser" name="username" required autocomplete="username" placeholder="Ej. admin o encargado@miski.com" />
+        <div id="localLoginFields">
+          <div class="field-group">
+            <label for="loginUser">Usuario o correo</label>
+            <input type="text" id="loginUser" name="username" required autocomplete="username" placeholder="Ej. admin o encargado@miski.com" />
+          </div>
+          <div class="field-group">
+            <label for="loginPass">Contraseña</label>
+            <input type="password" id="loginPass" name="password" required autocomplete="current-password" placeholder="Ingresa tu contraseña" />
+          </div>
         </div>
-        <div class="field-group">
-          <label for="loginPass">Contraseña</label>
-          <input type="password" id="loginPass" name="password" required autocomplete="current-password" placeholder="Ingresa tu contraseña" />
+        <div id="githubLoginFields" class="hidden">
+          <div class="field-group">
+            <label for="loginGithubToken">Token de GitHub (Fine-grained PAT)</label>
+            <input type="password" id="loginGithubToken" autocomplete="off" placeholder="github_pat_... o ghp_..." />
+            <span class="help-text">Se guarda solo en este dispositivo para publicar cambios en <strong>J-Santana-19/Miski-Menu</strong>.</span>
+          </div>
         </div>
         <p class="form-error hidden" id="loginError" role="alert"></p>
         <button type="submit" class="btn-admin-primary btn-full" id="loginSubmitBtn">Entrar al Panel</button>
@@ -40,15 +49,15 @@
     <header class="admin-header">
       <div class="admin-container admin-header-inner">
         <div class="admin-brand">
-          <img src="/assets/brand/logo-blanco.webp" alt="Miski" class="admin-logo" />
+          <img src="./assets/brand/logo-blanco.webp" alt="Miski" class="admin-logo" />
           <div>
             <strong>Portal Encargado</strong>
-            <span>Gestión de Menú QR</span>
+            <span id="adminModeLabel">Gestión de Menú QR</span>
           </div>
         </div>
         <div class="admin-top-actions">
-          <a href="/" target="_blank" rel="noopener noreferrer" class="btn-top-link">👁️ Ver Menú</a>
-          <a href="/qr" target="_blank" rel="noopener noreferrer" class="btn-top-link">🖨️ Código QR</a>
+          <a href="./" target="_blank" rel="noopener noreferrer" class="btn-top-link">👁️ Ver Menú</a>
+          <a href="./qr.html" target="_blank" rel="noopener noreferrer" class="btn-top-link">🖨️ Código QR</a>
           <button type="button" class="btn-top-link" id="openSettingsBtn">⚙️ Datos</button>
           <button type="button" class="btn-top-logout" id="logoutBtn">Salir</button>
         </div>
@@ -283,6 +292,6 @@
 
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="/js/admin.js" defer></script>
+  <script src="./js/admin.js" defer></script>
 </body>
 </html>
