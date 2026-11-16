@@ -1,0 +1,12 @@
+{
+  "name": "miski-menu-digital",
+  "version": "1.0.0",
+  "description": "Menú Digital Mobile First y Portal de Encargado para Miski (Panadería, Dulcería y Cafetería)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build-assets": "python3 scripts/build_assets.py"
+  },
+  "author": "Miski",
+  "license": "ISC"
+}

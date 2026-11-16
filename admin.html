@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Miski · Portal del Encargado</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#503629" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body>
+  <!-- Pantalla de Login -->
+  <section class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <img src="/assets/brand/logo-marron.webp" alt="Logo Miski" class="login-logo" />
+      <span class="login-badge">Acceso Privado de Administración</span>
+      <h1>Portal del Encargado</h1>
+      <p class="login-subtitle">Administra productos, precios, fotografías y disponibilidad del menú digital en tiempo real.</p>
+
+      <form id="loginForm" class="login-form">
+        <div class="field-group">
+          <label for="loginUser">Usuario o correo</label>
+          <input type="text" id="loginUser" name="username" required autocomplete="username" placeholder="Ej. admin o encargado@miski.com" />
+        </div>
+        <div class="field-group">
+          <label for="loginPass">Contraseña</label>
+          <input type="password" id="loginPass" name="password" required autocomplete="current-password" placeholder="Ingresa tu contraseña" />
+        </div>
+        <p class="form-error hidden" id="loginError" role="alert"></p>
+        <button type="submit" class="btn-admin-primary btn-full" id="loginSubmitBtn">Entrar al Panel</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Panel Principal del Encargado -->
+  <div class="admin-app hidden" id="adminApp">
+    <header class="admin-header">
+      <div class="admin-container admin-header-inner">
+        <div class="admin-brand">
+          <img src="/assets/brand/logo-blanco.webp" alt="Miski" class="admin-logo" />
+          <div>
+            <strong>Portal Encargado</strong>
+            <span>Gestión de Menú QR</span>
+          </div>
+        </div>
+        <div class="admin-top-actions">
+          <a href="/" target="_blank" rel="noopener noreferrer" class="btn-top-link">👁️ Ver Menú</a>
+          <a href="/qr" target="_blank" rel="noopener noreferrer" class="btn-top-link">🖨️ Código QR</a>
+          <button type="button" class="btn-top-link" id="openSettingsBtn">⚙️ Datos</button>
+          <button type="button" class="btn-top-logout" id="logoutBtn">Salir</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="admin-container admin-main">
+      <!-- Resumen de estado + Botón agregar -->
+      <section class="toolbar-hero">
+        <div class="stats-row" id="statsRow">
+          <div class="stat-pill">
+            <span class="stat-num" id="statTotal">0</span>
+            <span class="stat-label">Total</span>
+          </div>
+          <div class="stat-pill is-green">
+            <span class="stat-num" id="statActive">0</span>
+            <span class="stat-label">Visibles</span>
+          </div>
+          <div class="stat-pill is-muted">
+            <span class="stat-num" id="statHidden">0</span>
+            <span class="stat-label">Ocultos</span>
+          </div>
+        </div>
+        <button type="button" class="btn-add-product" id="openAddModalBtn">
+          <span>➕</span>
+          <span>Agregar Nuevo Producto</span>
+        </button>
+      </section>
+
+      <!-- Filtros de búsqueda -->
+      <section class="filters-bar">
+        <div class="search-wrap">
+          <input type="search" id="adminSearchInput" class="admin-input" placeholder="🔍 Buscar producto para editar precio u ocultar..." autocomplete="off" />
+        </div>
+        <div class="select-filters">
+          <select id="adminCatFilter" class="admin-select" aria-label="Filtrar por categoría">
+            <option value="all">Todas las categorías</option>
+          </select>
+          <select id="adminStatusFilter" class="admin-select" aria-label="Filtrar por visibilidad">
+            <option value="all">Todos los estados</option>
+            <option value="active">Solo visibles</option>
+            <option value="hidden">Solo ocultos / agotados</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- Listado de productos -->
+      <section class="admin-products-list" id="adminProductsList" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <!-- Modal Agregar / Editar Producto -->
+  <div class="modal-overlay hidden" id="productModal" role="dialog" aria-modal="true" aria-labelledby="productModalTitle">
+    <div class="modal-dialog">
+      <div class="modal-top">
+        <h2 id="productModalTitle">Nuevo Producto</h2>
+        <button type="button" class="modal-close-btn" id="closeProductModalBtn" aria-label="Cerrar">✕</button>
+      </div>
+
+      <form id="productForm" class="product-form">
+        <input type="hidden" id="prodId" />
+
+        <div class="form-row-2">
+          <div class="field-group">
+            <label for="prodCategory">Categoría *</label>
+            <select id="prodCategory" required></select>
+          </div>
+          <div class="field-group">
+            <label for="prodSubcategory">Subsección *</label>
+            <input type="text" id="prodSubcategory" list="subcategorySuggestions" required placeholder="Ej. Postres Individuales" />
+            <datalist id="subcategorySuggestions"></datalist>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="prodName">Nombre del producto *</label>
+          <input type="text" id="prodName" required placeholder="Ej. Volteado de Piña" />
+        </div>
+
+        <div class="field-group">
+          <label for="prodDesc">Descripción breve (opcional)</label>
+          <textarea id="prodDesc" rows="2" placeholder="Ej. Porción individual recién horneada"></textarea>
+        </div>
+
+        <div class="form-row-2">
+          <div class="field-group">
+            <label for="prodNote">Nota o etiqueta (opcional)</label>
+            <input type="text" id="prodNote" placeholder="Ej. CONTIENE QUESO AMERICANO*" />
+          </div>
+          <div class="field-group">
+            <label for="prodVariants">Variantes / Sabores (separados por coma)</label>
+            <input type="text" id="prodVariants" placeholder="Ej. Pollo, Carne" />
+          </div>
+        </div>
+
+        <!-- Tipo de Precio -->
+        <div class="pricing-box">
+          <label class="section-label">Tipo de Precio *</label>
+          <div class="price-type-tabs" id="priceTypeTabs">
+            <button type="button" class="ptype-btn is-active" data-ptype="single">Precio Único</button>
+            <button type="button" class="ptype-btn" data-ptype="weight">Por Peso (Kg)</button>
+            <button type="button" class="ptype-btn" data-ptype="sizes">Tamaños (8oz/12oz)</button>
+            <button type="button" class="ptype-btn" data-ptype="cake_matrix">Tabla Dulcería</button>
+          </div>
+
+          <!-- Single / Weight -->
+          <div id="priceSingleWrap" class="price-subpanel">
+            <div class="form-row-2">
+              <div class="field-group">
+                <label for="prodPrice">Precio (B/.) *</label>
+                <input type="number" id="prodPrice" step="0.01" min="0" placeholder="0.00" />
+              </div>
+              <div class="field-group" id="prodUnitWrap">
+                <label for="prodUnit">Presentación (opcional)</label>
+                <input type="text" id="prodUnit" placeholder="Ej. c/u, bolsa, 50 uds." />
+              </div>
+            </div>
+          </div>
+
+          <!-- Sizes -->
+          <div id="priceSizesWrap" class="price-subpanel hidden">
+            <div id="sizesRows" class="dynamic-rows"></div>
+            <button type="button" class="btn-secondary-sm" id="addSizeRowBtn">+ Agregar tamaño</button>
+          </div>
+
+          <!-- Cake Matrix -->
+          <div id="priceMatrixWrap" class="price-subpanel hidden">
+            <div class="field-group" style="margin-bottom:0.6rem">
+              <label for="matrixTypeSelect">Formato de torta</label>
+              <select id="matrixTypeSelect">
+                <option value="standard">Estándar (Vainilla / Chocolate)</option>
+                <option value="tiered">Eventos por pisos (Merengue / Chantillí)</option>
+              </select>
+            </div>
+            <div id="matrixRows" class="dynamic-rows"></div>
+            <button type="button" class="btn-secondary-sm" id="addMatrixRowBtn">+ Agregar medida</button>
+          </div>
+        </div>
+
+        <!-- Fotografía -->
+        <div class="photo-upload-box">
+          <label class="section-label">Fotografía del producto (opcional)</label>
+          <p class="help-text">Si subes una foto desde tu celular o PC, la ajustaremos automáticamente al formato 4:3 del menú para que nunca se vea descuadrada.</p>
+          <div class="photo-preview-row">
+            <div class="photo-preview-frame" id="photoPreviewFrame">
+              <span class="no-photo-placeholder">Sin foto</span>
+            </div>
+            <div class="photo-upload-controls">
+              <label class="btn-upload-label">
+                📷 Elegir o tomar foto
+                <input type="file" id="prodPhotoFile" accept="image/*" hidden />
+              </label>
+              <button type="button" class="btn-remove-photo hidden" id="removePhotoBtn">Quitar foto</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Banderas -->
+        <div class="checks-row">
+          <label class="check-item">
+            <input type="checkbox" id="prodActive" checked />
+            <span>👁️ Visible en el menú</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" id="prodFeatured" />
+            <span>⭐ Favorito de la Casa</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" id="prodPromo" />
+            <span>🏷️ Mostrar en Promociones</span>
+          </label>
+        </div>
+
+        <p class="form-error hidden" id="productFormError" role="alert"></p>
+
+        <div class="modal-footer-actions">
+          <button type="button" class="btn-cancel" id="cancelProductBtn">Cancelar</button>
+          <button type="submit" class="btn-admin-primary" id="saveProductBtn">✅ Guardar Producto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Datos de Negocio / WhatsApp / Sucursales -->
+  <div class="modal-overlay hidden" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-top">
+        <h2 id="settingsModalTitle">Datos del Establecimiento</h2>
+        <button type="button" class="modal-close-btn" id="closeSettingsModalBtn" aria-label="Cerrar">✕</button>
+      </div>
+      <form id="settingsForm" class="product-form">
+        <div class="field-group">
+          <label for="setWhatsapp">Número de WhatsApp (con código de país)</label>
+          <input type="text" id="setWhatsapp" placeholder="Ej. 50760000000" />
+          <span class="help-text">Si lo dejas en blanco, el botón de WhatsApp permanecerá oculto en el menú.</span>
+        </div>
+        <div class="field-group">
+          <label for="setHours">Horario de atención</label>
+          <input type="text" id="setHours" placeholder="Ej. Lunes a Domingo de 6:00 a.m. a 8:00 p.m." />
+        </div>
+        <div class="field-group">
+          <label for="setInstagram">Instagram (usuario o enlace)</label>
+          <input type="text" id="setInstagram" placeholder="Ej. miskipanaderia" />
+        </div>
+        <div class="field-group">
+          <label for="setCakeNotice">Aviso de encargos (Dulcería)</label>
+          <input type="text" id="setCakeNotice" />
+        </div>
+        <div class="field-group">
+          <label for="setBranches">Sucursales (separadas por coma)</label>
+          <input type="text" id="setBranches" />
+        </div>
+        <div class="modal-footer-actions">
+          <button type="button" class="btn-cancel" id="cancelSettingsBtn">Cancelar</button>
+          <button type="submit" class="btn-admin-primary">💾 Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal confirmación eliminar -->
+  <div class="modal-overlay hidden" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal-dialog modal-dialog-xs">
+      <h2 id="deleteModalTitle" style="margin-top:0;color:var(--miski-cacao)">¿Eliminar producto?</h2>
+      <p id="deleteModalText" style="color:var(--miski-mocha);font-size:0.92rem"></p>
+      <div class="modal-footer-actions">
+        <button type="button" class="btn-cancel" id="cancelDeleteBtn">Cancelar</button>
+        <button type="button" class="btn-danger" id="confirmDeleteBtn">Sí, eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="/js/admin.js" defer></script>
+</body>
+</html>

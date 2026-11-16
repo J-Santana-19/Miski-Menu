@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Miski · Habladores QR para Mesas y Mostrador</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --cacao: #503629;
+      --espresso: #3b2314;
+      --cream: #faf4ec;
+      --wheat: #f3e5d0;
+      --caramel: #c87d46;
+      --border: #e4d2bc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Plus Jakarta Sans", sans-serif;
+      background: var(--cream);
+      color: var(--espresso);
+      padding: 1.25rem;
+    }
+    .toolbar {
+      max-width: 900px;
+      margin: 0 auto 1.5rem;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1rem 1.2rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .url-editor {
+      display: flex;
+      flex: 1 1 280px;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .url-editor input {
+      flex: 1;
+      min-height: 42px;
+      padding: 0.45rem 0.75rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    .btn {
+      min-height: 42px;
+      padding: 0.5rem 1rem;
+      border-radius: 10px;
+      border: none;
+      background: var(--cacao);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.88rem;
+    }
+    .btn-outline {
+      background: var(--cream);
+      color: var(--cacao);
+      border: 1px solid var(--border);
+    }
+    .print-sheet {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 1.5rem;
+    }
+    .tent-card {
+      background: #fff;
+      border: 2px solid var(--cacao);
+      border-radius: 22px;
+      padding: 1.8rem 1.4rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.9rem;
+      box-shadow: 0 10px 28px rgba(80, 54, 41, 0.08);
+    }
+    .tent-card.is-dark {
+      background: var(--cacao);
+      color: var(--cream);
+    }
+    .tent-logo {
+      height: 54px;
+      width: auto;
+    }
+    .tent-kicker {
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--caramel);
+    }
+    .tent-card.is-dark .tent-kicker {
+      color: var(--wheat);
+    }
+    .tent-title {
+      margin: 0;
+      font-family: "Cormorant Garamond", serif;
+      font-size: 1.9rem;
+      line-height: 1.08;
+    }
+    .qr-frame {
+      background: #fff;
+      padding: 0.85rem;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      width: 220px;
+      height: 220px;
+    }
+    .qr-frame svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .tent-caption {
+      margin: 0;
+      font-size: 0.88rem;
+      opacity: 0.9;
+    }
+    .tent-url {
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 0.3rem 0.75rem;
+      border-radius: 999px;
+      background: var(--wheat);
+      color: var(--cacao);
+      word-break: break-all;
+    }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .toolbar { display: none; }
+      .tent-card { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div class="url-editor">
+      <label for="qrUrlInput" style="font-weight:700;font-size:0.85rem;white-space:nowrap">URL del Menú:</label>
+      <input type="url" id="qrUrlInput" />
+    </div>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+      <button type="button" class="btn btn-outline" id="downloadSvgBtn">⬇️ Descargar QR (SVG)</button>
+      <button type="button" class="btn" onclick="window.print()">🖨️ Imprimir Habladores</button>
+      <a href="/encargado" class="btn btn-outline">← Volver al Panel</a>
+    </div>
+  </div>
+
+  <div class="print-sheet">
+    <!-- Hablador 1: Mostrador / Mesas -->
+    <div class="tent-card">
+      <img src="/assets/brand/logo-marron.webp" alt="Miski" class="tent-logo" />
+      <span class="tent-kicker">Menú Digital</span>
+      <h1 class="tent-title">Escanea y conoce nuestros precios al instante</h1>
+      <div class="qr-frame" id="qrMount1"></div>
+      <p class="tent-caption">Apunta con la cámara de tu celular para ver panes, emparedados, dulces, postres y cafetería.</p>
+      <span class="tent-url js-url-label"></span>
+    </div>
+
+    <!-- Hablador 2: Vitrina Dulcería / Para Llevar -->
+    <div class="tent-card is-dark">
+      <img src="/assets/brand/logo-blanco.webp" alt="Miski" class="tent-logo" />
+      <span class="tent-kicker">Dulcería y Encargos</span>
+      <h2 class="tent-title">Tortas, postres y bandejas para compartir</h2>
+      <div class="qr-frame" id="qrMount2"></div>
+      <p class="tent-caption">Consulta tamaños, porciones y precios desde tu teléfono sin hacer fila.</p>
+      <span class="tent-url js-url-label"></span>
+    </div>
+  </div>
+
+  <script src="/js/qrcode.js"></script>
+  <script>
+    const input = document.getElementById("qrUrlInput");
+    const defaultUrl = window.location.origin + "/";
+    input.value = defaultUrl;
+
+    function renderAll() {
+      const targetUrl = input.value.trim() || defaultUrl;
+      const svg = window.MiskiQR.toSvg(targetUrl, { color: "#503629", bg: "#FFFFFF", margin: 3 });
+      document.getElementById("qrMount1").innerHTML = svg;
+      document.getElementById("qrMount2").innerHTML = svg;
+      document.querySelectorAll(".js-url-label").forEach((el) => {
+        el.textContent = targetUrl;
+      });
+    }
+
+    input.addEventListener("input", renderAll);
+    document.getElementById("downloadSvgBtn").addEventListener("click", () => {
+      const targetUrl = input.value.trim() || defaultUrl;
+      const svg = window.MiskiQR.toSvg(targetUrl, { color: "#503629", bg: "#FFFFFF", margin: 4 });
+      const blob = new Blob([svg], { type: "image/svg+xml" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "miski-menu-qr.svg";
+      a.click();
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>
