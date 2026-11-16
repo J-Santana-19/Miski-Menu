@@ -165,7 +165,7 @@
   <div class="print-sheet">
     <!-- Hablador 1: Mostrador / Mesas -->
     <div class="tent-card">
-      <img src="/assets/brand/logo-marron.webp" alt="Miski" class="tent-logo" />
+      <img src="./assets/brand/logo-marron.webp" alt="Miski" class="tent-logo" />
       <span class="tent-kicker">Menú Digital</span>
       <h1 class="tent-title">Escanea y conoce nuestros precios al instante</h1>
       <div class="qr-frame" id="qrMount1"></div>
@@ -175,7 +175,7 @@
 
     <!-- Hablador 2: Vitrina Dulcería / Para Llevar -->
     <div class="tent-card is-dark">
-      <img src="/assets/brand/logo-blanco.webp" alt="Miski" class="tent-logo" />
+      <img src="./assets/brand/logo-blanco.webp" alt="Miski" class="tent-logo" />
       <span class="tent-kicker">Dulcería y Encargos</span>
       <h2 class="tent-title">Tortas, postres y bandejas para compartir</h2>
       <div class="qr-frame" id="qrMount2"></div>
@@ -184,10 +184,10 @@
     </div>
   </div>
 
-  <script src="/js/qrcode.js"></script>
+  <script src="./js/qrcode.js"></script>
   <script>
     const input = document.getElementById("qrUrlInput");
-    const defaultUrl = window.location.origin + "/";
+    const defaultUrl = new URL("./", window.location.href).href;
     input.value = defaultUrl;
 
     function renderAll() {

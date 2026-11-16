@@ -60,10 +60,21 @@
     return `https://wa.me/${rawPhone}?text=${text}`;
   }
 
+  function resolveAssetUrl(url) {
+    const raw = String(url || "");
+    return raw.startsWith("/assets/") ? `./${raw.slice(1)}` : raw;
+  }
+
   async function fetchMenuData() {
-    const res = await fetch(`/api/menu?t=${Date.now()}`, { cache: "no-store" });
-    if (!res.ok) throw new Error("No se pudo cargar el menú");
-    return res.json();
+    try {
+      const res = await fetch(`/api/menu?t=${Date.now()}`, { cache: "no-store" });
+      if (res.ok) return await res.json();
+    } catch {
+      // Sin backend Node (ej. GitHub Pages), usamos el JSON estático relativo
+    }
+    const staticRes = await fetch(`./data/menu.json?t=${Date.now()}`, { cache: "no-store" });
+    if (!staticRes.ok) throw new Error("No se pudo cargar el menú");
+    return staticRes.json();
   }
 
   function getActiveProducts() {
@@ -209,7 +220,7 @@
     return `
       <article class="product-card ${p.featured ? "is-featured" : ""}">
         <div class="card-media">
-          <img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" />
+          <img src="${escapeHtml(resolveAssetUrl(p.image))}" alt="${escapeHtml(p.name)}" loading="lazy" />
           ${ribbon}
         </div>
         <div class="card-body">
@@ -366,7 +377,7 @@
       <article class="cake-card" data-cake-id="${escapeHtml(p.id)}">
         ${
           p.image
-            ? `<div class="card-media"><img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" /></div>`
+            ? `<div class="card-media"><img src="${escapeHtml(resolveAssetUrl(p.image))}" alt="${escapeHtml(p.name)}" loading="lazy" /></div>`
             : ""
         }
         <div class="cake-body">
