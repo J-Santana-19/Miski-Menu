@@ -162,9 +162,10 @@
         links.push(`<a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="footer-social-btn">💬 Consultar por WhatsApp</a>`);
       }
       if (brand.instagram) {
-        const igHandle = brand.instagram.replace(/^@/, "");
-        const igUrl = brand.instagram.startsWith("http") ? brand.instagram : `https://instagram.com/${igHandle}`;
-        links.push(`<a href="${escapeHtml(igUrl)}" target="_blank" rel="noopener noreferrer" class="footer-social-btn">📸 Instagram @${escapeHtml(igHandle)}</a>`);
+        const rawIg = String(brand.instagram).trim();
+        const igHandle = rawIg.replace(/^@/, "");
+        const igUrl = /^https?:\/\//i.test(rawIg) ? rawIg : `https://instagram.com/${igHandle}`;
+        links.push(`<a href="${escapeHtml(igUrl)}" target="_blank" rel="noopener noreferrer" class="footer-social-btn">📸 Instagram</a>`);
       }
       if (!links.length) {
         links.push(`<button type="button" class="footer-social-btn" onclick="document.getElementById('openBranchesBtn').click()">📍 Ver nuestras ${branchDetails.length} sucursales</button>`);
