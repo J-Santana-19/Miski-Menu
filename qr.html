@@ -201,14 +201,19 @@
 
   <script src="./js/qrcode.js"></script>
   <script>
-    const STORAGE_KEY = "miski_qr_saved_url";
+    const GH_OWNER = "J-Santana-19";
+    const GH_REPO = "Miski-Menu";
+    const GH_BRANCH = "main";
+    const GH_TOKEN_KEY = "miski_gh_token";
+    const LOCAL_TOKEN_KEY = "miski_admin_token";
+
     const input = document.getElementById("qrUrlInput");
     const confirmBtn = document.getElementById("confirmUrlBtn");
     const urlStatus = document.getElementById("urlStatus");
     const defaultUrl = new URL("./", window.location.href).href;
 
-    let activeUrl = localStorage.getItem(STORAGE_KEY) || defaultUrl;
-    input.value = activeUrl;
+    let activeUrl = defaultUrl;
+    let backendMode = "github";
 
     function showStatus(msg, isError = false) {
       urlStatus.textContent = msg;
@@ -216,8 +221,38 @@
       urlStatus.classList.remove("hidden");
       clearTimeout(showStatus._timer);
       if (!isError) {
-        showStatus._timer = setTimeout(() => urlStatus.classList.add("hidden"), 3000);
+        showStatus._timer = setTimeout(() => urlStatus.classList.add("hidden"), 3500);
       }
+    }
+
+    function utf8ToBase64(str) {
+      const bytes = new TextEncoder().encode(str);
+      let binary = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      return btoa(binary);
+    }
+
+    function base64ToUtf8(b64) {
+      const binary = atob(String(b64 || "").replace(/\s+/g, ""));
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new TextDecoder().decode(bytes);
+    }
+
+    async function detectMode() {
+      if (window.location.hostname.endsWith("github.io")) return "github";
+      try {
+        const res = await fetch("/api/menu", { method: "HEAD", cache: "no-store" });
+        if (res.ok) return "local";
+      } catch {
+        // Sin backend Node
+      }
+      return "github";
     }
 
     function renderAll(urlToRender) {
@@ -237,19 +272,124 @@
       }
     }
 
-    function confirmUrl() {
-      const val = input.value.trim();
-      if (!val) {
-        localStorage.removeItem(STORAGE_KEY);
-        input.value = defaultUrl;
-        if (renderAll(defaultUrl)) {
-          showStatus("✓ Enlace restablecido al menú predeterminado.");
+    async function loadSavedUrl() {
+      try {
+        let menuData = null;
+        if (backendMode === "local") {
+          const res = await fetch(`/api/menu?t=${Date.now()}`, { cache: "no-store" });
+          if (res.ok) menuData = await res.json();
+        } else {
+          const ghToken = localStorage.getItem(GH_TOKEN_KEY) || "";
+          if (ghToken) {
+            const res = await fetch(
+              `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/data/menu.json?ref=${GH_BRANCH}&t=${Date.now()}`,
+              {
+                headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${ghToken}` },
+                cache: "no-store",
+              }
+            );
+            if (res.ok) {
+              const file = await res.json();
+              menuData = JSON.parse(base64ToUtf8(file.content));
+            }
+          }
+          if (!menuData) {
+            const res = await fetch(`./data/menu.json?t=${Date.now()}`, { cache: "no-store" });
+            if (res.ok) menuData = await res.json();
+          }
         }
+        const saved = String(menuData?.brand?.qrUrl || "").trim();
+        activeUrl = saved || defaultUrl;
+      } catch {
+        activeUrl = defaultUrl;
+      }
+      input.value = activeUrl;
+      renderAll(activeUrl);
+    }
+
+    async function saveUrlRemote(newUrl) {
+      if (backendMode === "local") {
+        const token = sessionStorage.getItem(LOCAL_TOKEN_KEY) || "";
+        if (!token) {
+          throw new Error("Inicia sesión en el Portal del Encargado para guardar este cambio.");
+        }
+        const res = await fetch("/api/settings", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ qrUrl: newUrl }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "No se pudo guardar el enlace.");
         return;
       }
-      if (renderAll(val)) {
-        localStorage.setItem(STORAGE_KEY, val);
-        showStatus("✓ Link confirmado y guardado. Se mantendrá aunque salgas de la página.");
+
+      const ghToken = localStorage.getItem(GH_TOKEN_KEY) || "";
+      if (!ghToken) {
+        throw new Error("Inicia sesión primero en admin.html para guardar el enlace para todos los encargados.");
+      }
+      const getRes = await fetch(
+        `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/data/menu.json?ref=${GH_BRANCH}&t=${Date.now()}`,
+        {
+          headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${ghToken}` },
+          cache: "no-store",
+        }
+      );
+      if (!getRes.ok) {
+        throw new Error("No se pudo leer menu.json en GitHub. Verifica tu sesión en admin.html.");
+      }
+      const file = await getRes.json();
+      const menuData = JSON.parse(base64ToUtf8(file.content));
+      menuData.brand = menuData.brand || {};
+      menuData.brand.qrUrl = newUrl;
+
+      const putRes = await fetch(
+        `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/data/menu.json`,
+        {
+          method: "PUT",
+          headers: {
+            Accept: "application/vnd.github+json",
+            Authorization: `Bearer ${ghToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: newUrl ? "Actualizar enlace del código QR" : "Restablecer enlace predeterminado del QR",
+            content: utf8ToBase64(JSON.stringify(menuData, null, 2)),
+            sha: file.sha,
+            branch: GH_BRANCH,
+          }),
+        }
+      );
+      if (!putRes.ok) {
+        const errData = await putRes.json().catch(() => ({}));
+        throw new Error(errData.message || "Error al guardar el enlace en GitHub.");
+      }
+    }
+
+    async function confirmUrl() {
+      const val = input.value.trim();
+      const urlToSave = val;
+      const urlToShow = val || defaultUrl;
+      if (!val) input.value = defaultUrl;
+      if (!renderAll(urlToShow)) return;
+
+      confirmBtn.disabled = true;
+      const originalText = confirmBtn.textContent;
+      confirmBtn.textContent = "Guardando...";
+      try {
+        await saveUrlRemote(urlToSave);
+        showStatus(
+          val
+            ? "✓ Link guardado para todos los encargados."
+            : "✓ Enlace restablecido al menú predeterminado para todos."
+        );
+      } catch (err) {
+        showStatus(err.message, true);
+      } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = originalText;
       }
     }
 
@@ -279,7 +419,10 @@
       a.click();
     });
 
-    renderAll(activeUrl);
+    (async () => {
+      backendMode = await detectMode();
+      await loadSavedUrl();
+    })();
   </script>
 </body>
 </html>

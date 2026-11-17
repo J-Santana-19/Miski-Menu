@@ -318,6 +318,7 @@ const server = http.createServer(async (req, res) => {
       if (body.hours !== undefined) data.brand.hours = String(body.hours).trim();
       if (body.instagram !== undefined) data.brand.instagram = String(body.instagram).trim();
       if (body.cakeNotice !== undefined) data.brand.cakeNotice = String(body.cakeNotice).trim();
+      if (body.qrUrl !== undefined) data.brand.qrUrl = String(body.qrUrl).trim();
       if (Array.isArray(body.branches)) {
         data.brand.branches = body.branches.map((b) => String(b).trim()).filter(Boolean);
       }
