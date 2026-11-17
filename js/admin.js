@@ -11,7 +11,7 @@
   const state = {
     mode: "local",
     token: sessionStorage.getItem(TOKEN_KEY) || "",
-    ghToken: localStorage.getItem(GH_TOKEN_KEY) || "",
+    ghToken: "",
     ghMenuSha: "",
     data: null,
     search: "",
@@ -656,7 +656,6 @@
             body: JSON.stringify({ githubToken: ghToken }),
           });
           state.ghToken = res.token;
-          localStorage.setItem(GH_TOKEN_KEY, res.token);
         } else {
           const res = await apiFetch("/api/login", {
             method: "POST",
@@ -975,6 +974,7 @@
   }
 
   async function init() {
+    localStorage.removeItem(GH_TOKEN_KEY);
     state.mode = await detectMode();
     applyLoginModeUI();
     bindEvents();

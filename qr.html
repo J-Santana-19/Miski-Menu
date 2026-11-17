@@ -40,17 +40,22 @@
     }
     .url-editor {
       display: flex;
+      flex-wrap: wrap;
       flex: 1 1 280px;
       gap: 0.5rem;
       align-items: center;
     }
     .url-editor input {
-      flex: 1;
+      flex: 1 1 190px;
+      min-width: 0;
       min-height: 42px;
       padding: 0.45rem 0.75rem;
       border-radius: 10px;
       border: 1px solid var(--border);
       font-size: 0.9rem;
+    }
+    .hidden {
+      display: none !important;
     }
     .btn {
       min-height: 42px;
@@ -167,6 +172,7 @@
     <div class="url-editor">
       <label for="qrUrlInput" style="font-weight:700;font-size:0.85rem;white-space:nowrap">URL del Menú:</label>
       <input type="text" id="qrUrlInput" placeholder="https://..." />
+      <input type="password" id="qrGhToken" class="hidden" placeholder="Token de GitHub (para guardar)" autocomplete="off" />
       <button type="button" class="btn" id="confirmUrlBtn">✅ Confirmar</button>
     </div>
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
@@ -208,9 +214,12 @@
     const LOCAL_TOKEN_KEY = "miski_admin_token";
 
     const input = document.getElementById("qrUrlInput");
+    const tokenInput = document.getElementById("qrGhToken");
     const confirmBtn = document.getElementById("confirmUrlBtn");
     const urlStatus = document.getElementById("urlStatus");
     const defaultUrl = new URL("./", window.location.href).href;
+
+    localStorage.removeItem(GH_TOKEN_KEY);
 
     let activeUrl = defaultUrl;
     let backendMode = "github";
@@ -326,9 +335,9 @@
         return;
       }
 
-      const ghToken = localStorage.getItem(GH_TOKEN_KEY) || "";
+      const ghToken = tokenInput.value.trim();
       if (!ghToken) {
-        throw new Error("Inicia sesión primero en admin.html para guardar el enlace para todos los encargados.");
+        throw new Error("Ingresa el Token de GitHub en la casilla para guardar el enlace para todos.");
       }
       const getRes = await fetch(
         `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/data/menu.json?ref=${GH_BRANCH}&t=${Date.now()}`,
@@ -421,6 +430,9 @@
 
     (async () => {
       backendMode = await detectMode();
+      if (backendMode === "github") {
+        tokenInput.classList.remove("hidden");
+      }
       await loadSavedUrl();
     })();
   </script>
