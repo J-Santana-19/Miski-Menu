@@ -142,6 +142,19 @@
       color: var(--cacao);
       word-break: break-all;
     }
+    .url-status {
+      width: 100%;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #1f7a4c;
+      margin-top: 0.25rem;
+    }
+    .url-status.is-error {
+      color: #b42318;
+    }
+    .url-status.hidden {
+      display: none;
+    }
     @media print {
       body { background: #fff; padding: 0; }
       .toolbar { display: none; }
@@ -153,13 +166,15 @@
   <div class="toolbar">
     <div class="url-editor">
       <label for="qrUrlInput" style="font-weight:700;font-size:0.85rem;white-space:nowrap">URL del Menú:</label>
-      <input type="url" id="qrUrlInput" />
+      <input type="text" id="qrUrlInput" placeholder="https://..." />
+      <button type="button" class="btn" id="confirmUrlBtn">✅ Confirmar</button>
     </div>
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
       <button type="button" class="btn btn-outline" id="downloadSvgBtn">⬇️ Descargar QR (SVG)</button>
-      <button type="button" class="btn" onclick="window.print()">🖨️ Imprimir Habladores</button>
-      <a href="/encargado" class="btn btn-outline">← Volver al Panel</a>
+      <button type="button" class="btn" onclick="window.print()">🖨️ Imprimir QR</button>
+      <a href="./admin.html" class="btn btn-outline">← Volver al Panel</a>
     </div>
+    <div id="urlStatus" class="url-status hidden" role="status" aria-live="polite"></div>
   </div>
 
   <div class="print-sheet">
@@ -186,23 +201,76 @@
 
   <script src="./js/qrcode.js"></script>
   <script>
+    const STORAGE_KEY = "miski_qr_saved_url";
     const input = document.getElementById("qrUrlInput");
+    const confirmBtn = document.getElementById("confirmUrlBtn");
+    const urlStatus = document.getElementById("urlStatus");
     const defaultUrl = new URL("./", window.location.href).href;
-    input.value = defaultUrl;
 
-    function renderAll() {
-      const targetUrl = input.value.trim() || defaultUrl;
-      const svg = window.MiskiQR.toSvg(targetUrl, { color: "#503629", bg: "#FFFFFF", margin: 3 });
-      document.getElementById("qrMount1").innerHTML = svg;
-      document.getElementById("qrMount2").innerHTML = svg;
-      document.querySelectorAll(".js-url-label").forEach((el) => {
-        el.textContent = targetUrl;
-      });
+    let activeUrl = localStorage.getItem(STORAGE_KEY) || defaultUrl;
+    input.value = activeUrl;
+
+    function showStatus(msg, isError = false) {
+      urlStatus.textContent = msg;
+      urlStatus.classList.toggle("is-error", isError);
+      urlStatus.classList.remove("hidden");
+      clearTimeout(showStatus._timer);
+      if (!isError) {
+        showStatus._timer = setTimeout(() => urlStatus.classList.add("hidden"), 3000);
+      }
     }
 
-    input.addEventListener("input", renderAll);
+    function renderAll(urlToRender) {
+      const targetUrl = (urlToRender !== undefined ? urlToRender : input.value).trim() || defaultUrl;
+      try {
+        const svg = window.MiskiQR.toSvg(targetUrl, { color: "#503629", bg: "#FFFFFF", margin: 3 });
+        document.getElementById("qrMount1").innerHTML = svg;
+        document.getElementById("qrMount2").innerHTML = svg;
+        document.querySelectorAll(".js-url-label").forEach((el) => {
+          el.textContent = targetUrl;
+        });
+        activeUrl = targetUrl;
+        return true;
+      } catch (err) {
+        showStatus(err.message || "No se pudo generar el código QR para este enlace.", true);
+        return false;
+      }
+    }
+
+    function confirmUrl() {
+      const val = input.value.trim();
+      if (!val) {
+        localStorage.removeItem(STORAGE_KEY);
+        input.value = defaultUrl;
+        if (renderAll(defaultUrl)) {
+          showStatus("✓ Enlace restablecido al menú predeterminado.");
+        }
+        return;
+      }
+      if (renderAll(val)) {
+        localStorage.setItem(STORAGE_KEY, val);
+        showStatus("✓ Link confirmado y guardado. Se mantendrá aunque salgas de la página.");
+      }
+    }
+
+    input.addEventListener("input", () => {
+      urlStatus.classList.add("hidden");
+      if (input.value.trim()) {
+        renderAll(input.value);
+      }
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        confirmUrl();
+      }
+    });
+
+    confirmBtn.addEventListener("click", confirmUrl);
+
     document.getElementById("downloadSvgBtn").addEventListener("click", () => {
-      const targetUrl = input.value.trim() || defaultUrl;
+      const targetUrl = activeUrl || defaultUrl;
       const svg = window.MiskiQR.toSvg(targetUrl, { color: "#503629", bg: "#FFFFFF", margin: 4 });
       const blob = new Blob([svg], { type: "image/svg+xml" });
       const a = document.createElement("a");
@@ -211,7 +279,7 @@
       a.click();
     });
 
-    renderAll();
+    renderAll(activeUrl);
   </script>
 </body>
 </html>
