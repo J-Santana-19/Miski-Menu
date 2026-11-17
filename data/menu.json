@@ -981,7 +981,7 @@
       "image": "/assets/products/uploads/1794849783083-dulce-sencillo-con-diseno-adicional.webp",
       "featured": false,
       "promo": false,
-      "active": false,
+      "active": true,
       "matrixType": "standard",
       "matrix": [
         {
