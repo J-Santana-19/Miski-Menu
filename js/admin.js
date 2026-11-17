@@ -11,7 +11,7 @@
   const state = {
     mode: "local",
     token: sessionStorage.getItem(TOKEN_KEY) || "",
-    ghToken: "",
+    ghToken: sessionStorage.getItem(GH_TOKEN_KEY) || "",
     ghMenuSha: "",
     data: null,
     search: "",
@@ -340,6 +340,7 @@
     state.token = "";
     state.ghToken = "";
     sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(GH_TOKEN_KEY);
     localStorage.removeItem(GH_TOKEN_KEY);
     showLogin();
   }
@@ -656,6 +657,7 @@
             body: JSON.stringify({ githubToken: ghToken }),
           });
           state.ghToken = res.token;
+          sessionStorage.setItem(GH_TOKEN_KEY, res.token);
         } else {
           const res = await apiFetch("/api/login", {
             method: "POST",
