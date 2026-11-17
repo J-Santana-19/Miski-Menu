@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Miski · Estudio 3D de Dulces y Tortas (Prototipo)</title>
+  <meta name="description" content="Prototipo interactivo en 3D para visualizar y personalizar los dulces y tortas de Miski en proporciones reales." />
+  <meta name="theme-color" content="#503629" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/dulces-3d.css?v=1" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./js/vendor/three.module.js",
+        "three/addons/controls/OrbitControls.js": "./js/vendor/OrbitControls.js",
+        "three/addons/geometries/DecalGeometry.js": "./js/vendor/DecalGeometry.js",
+        "three/addons/geometries/RoundedBoxGeometry.js": "./js/vendor/RoundedBoxGeometry.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- Encabezado aislado del prototipo -->
+  <header class="studio-header">
+    <div class="studio-header-inner">
+      <div class="studio-brand-wrap">
+        <a href="./index.html" class="brand-lockup" aria-label="Volver al menú Miski">
+          <img src="./assets/brand/logo-marron.webp" alt="Miski" class="brand-logo" />
+        </a>
+        <div class="studio-title-group">
+          <span class="proto-badge">🧪 Prototipo 3D</span>
+          <h1 class="studio-title">Estudio 3D de Dulcería</h1>
+        </div>
+      </div>
+      <div class="studio-header-actions">
+        <a href="./index.html" class="btn-back-menu">← Volver al Menú</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Espacio de trabajo principal -->
+  <main class="studio-workspace">
+    <!-- Columna izquierda: Visor 3D interactivo -->
+    <section class="viewer-stage" aria-label="Visor 3D interactivo del dulce">
+      <div class="viewer-topbar">
+        <div class="viewer-cake-info">
+          <strong id="hudCakeName">Cargando dulce...</strong>
+          <span id="hudCakeMeta">—</span>
+        </div>
+        <div class="viewer-price-pill" id="hudCakePrice">B/. 0.00</div>
+      </div>
+
+      <!-- Selector rápido de pisos (visible en tortas de 2, 3 y 4 pisos) -->
+      <div class="viewer-tier-bar hidden" id="viewerTierBar" role="group" aria-label="Seleccionar piso en 3D">
+        <span class="tier-bar-label">Piso activo:</span>
+        <div class="tier-pills" id="viewerTierPills"></div>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="cake3dCanvas" aria-label="Modelo 3D del dulce Miski"></canvas>
+
+        <div class="viewer-hint-badge" id="viewerHintBadge">
+          🖱️ Arrastra para rotar 360° · Rueda o pellizco para zoom
+        </div>
+
+        <div class="move-mode-banner hidden" id="moveModeBanner">
+          <span>✋ <strong>Modo Mover Imagen:</strong> Arrastra sobre el dulce para ubicar tu imagen</span>
+          <button type="button" class="btn-mini-done" id="btnDoneMoveMode">Listo</button>
+        </div>
+      </div>
+
+      <div class="viewer-toolbar">
+        <div class="toolbar-group" role="group" aria-label="Vistas de cámara">
+          <button type="button" class="tool-btn is-active" data-cam="iso" title="Vista Isométrica">📐 3D</button>
+          <button type="button" class="tool-btn" data-cam="front" title="Vista Frontal">👁️ Frente</button>
+          <button type="button" class="tool-btn" data-cam="top" title="Vista Superior">⬆️ Arriba</button>
+          <button type="button" class="tool-btn" id="btnAutoRotate" aria-pressed="false" title="Giro automático 360°">🔄 Giro</button>
+        </div>
+        <div class="toolbar-group">
+          <button type="button" class="tool-btn" id="btnToggleCutaway" aria-pressed="false" title="Ver corte de bizcocho Vainilla o Chocolate">
+            🔪 Corte
+          </button>
+          <button type="button" class="tool-btn tool-btn-accent" id="btnToggleMoveHud" aria-pressed="false" title="Mover imagen sobre el dulce">
+            ✋ Mover imagen
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Columna derecha: Personalizador conectado con data/menu.json -->
+    <aside class="customizer-panel" aria-label="Panel de personalización 3D">
+      <!-- Pestañas rápidas (navegación directa en móvil y anclas en escritorio) -->
+      <nav class="panel-nav-tabs" id="panelNavTabs" aria-label="Pasos de personalización">
+        <button type="button" class="panel-tab is-active" data-tab="catalog">1. Catálogo</button>
+        <button type="button" class="panel-tab" data-tab="size">2. Tamaño</button>
+        <button type="button" class="panel-tab" data-tab="style">3. Color</button>
+        <button type="button" class="panel-tab" data-tab="media">4. Foto/Extras</button>
+        <button type="button" class="panel-tab" data-tab="summary">5. Resumen</button>
+      </nav>
+
+      <div class="panel-cards-stack">
+        <!-- 1. Catálogo visual desde data/menu.json -->
+        <section class="panel-card is-tab-active" id="card-catalog" data-panel="catalog">
+          <div class="card-head">
+            <h2>1. Catálogo de Dulces Miski</h2>
+            <span class="card-badge" id="catalogCountBadge">0 productos</span>
+          </div>
+
+          <div class="filter-pills" id="catalogFilterBar" role="group" aria-label="Filtrar catálogo">
+            <button type="button" class="filter-pill is-active" data-filter="all">🎂 Dulcería</button>
+            <button type="button" class="filter-pill" data-filter="clasicas">Clásicas y Frías</button>
+            <button type="button" class="filter-pill" data-filter="tematicas">Personalizadas</button>
+            <button type="button" class="filter-pill" data-filter="eventos">Eventos 2-4 Pisos</button>
+            <button type="button" class="filter-pill" data-filter="postres">🍮 Postres</button>
+          </div>
+
+          <div class="catalog-grid" id="catalogGrid">
+            <div class="loading-inline">Cargando catálogo desde data/menu.json...</div>
+          </div>
+        </section>
+
+        <!-- 2. Tamaño oficial (cake_matrix), Masa y Cobertura -->
+        <section class="panel-card" id="card-size" data-panel="size">
+          <div class="card-head">
+            <h2>2. Tamaño, Masa y Cobertura</h2>
+            <span class="card-badge" id="shapeBadge">—</span>
+          </div>
+
+          <div class="field-block" id="sizeSelectorBlock">
+            <label class="field-label">Medidas oficiales (<code class="inline-code">cake_matrix</code>):</label>
+            <div class="size-pills-grid" id="sizePillsContainer"></div>
+            <div class="size-meta-box" id="sizeMetaBox"></div>
+          </div>
+
+          <div class="field-block">
+            <label class="field-label">Sabor de Masa (Bizcocho):</label>
+            <div class="choice-row-2" id="spongeSelector">
+              <button type="button" class="choice-card is-active" data-sponge="vanilla">
+                <span class="choice-title">🍦 Vainilla</span>
+                <strong class="choice-price" id="priceVanillaLabel">B/. —</strong>
+              </button>
+              <button type="button" class="choice-card" data-sponge="chocolate">
+                <span class="choice-title">🍫 Chocolate</span>
+                <strong class="choice-price" id="priceChocolateLabel">B/. —</strong>
+              </button>
+            </div>
+          </div>
+
+          <div class="field-block">
+            <label class="field-label">Cobertura y Acabado 3D:</label>
+            <div class="choice-row-2" id="frostingSelector">
+              <button type="button" class="choice-card is-active" data-frosting="merengue">
+                <span class="choice-title">☁️ Merengue</span>
+                <span class="choice-sub" id="priceMerengueSub">Satinado artesanal</span>
+              </button>
+              <button type="button" class="choice-card" data-frosting="chantilly">
+                <span class="choice-title">✨ Chantillí</span>
+                <span class="choice-sub" id="priceChantillySub">Suave aterciopelado</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="field-block fine-tune-box">
+            <div class="fine-tune-head">
+              <label class="field-label">Ajuste fino visual (Proporción 3D):</label>
+              <button type="button" class="btn-link-reset" id="btnResetProportions">Restablecer 100%</button>
+            </div>
+            <div class="slider-row">
+              <label for="widthScaleInput">Ancho / Diámetro</label>
+              <input type="range" id="widthScaleInput" min="80" max="125" step="5" value="100" />
+              <span id="widthScaleVal">100%</span>
+            </div>
+            <div class="slider-row">
+              <label for="heightScaleInput">Altura del dulce</label>
+              <input type="range" id="heightScaleInput" min="80" max="125" step="5" value="100" />
+              <span id="heightScaleVal">100%</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Colores por piso y bordes -->
+        <section class="panel-card" id="card-style" data-panel="style">
+          <div class="card-head">
+            <h2>3. Colores por Piso y Bordes</h2>
+          </div>
+
+          <div class="field-block" id="tierTargetBlock">
+            <label class="field-label">Superficie / Piso a colorear (también puedes tocarlo en 3D):</label>
+            <div class="tier-target-pills" id="tierColorTargets"></div>
+          </div>
+
+          <div class="field-block">
+            <label class="field-label">Paleta de Pastelería Miski:</label>
+            <div class="swatch-grid" id="colorPaletteGrid"></div>
+            <div class="free-color-row">
+              <label for="surfaceColorPicker">Color libre de cobertura:</label>
+              <div class="color-picker-wrap">
+                <input type="color" id="surfaceColorPicker" value="#fff9f0" />
+                <span id="surfaceColorHex">#FFF9F0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-block">
+            <label class="field-label">Color de Bordes / Ribetes de Manga:</label>
+            <div class="border-color-row">
+              <div class="swatch-row-mini" id="borderSwatchesGrid"></div>
+              <input type="color" id="borderColorPicker" value="#c87d46" aria-label="Color libre de bordes" />
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. Imágenes, Photocake y Extras 3D -->
+        <section class="panel-card" id="card-media" data-panel="media">
+          <div class="card-head">
+            <h2>4. Photocake, Imágenes y Extras 3D</h2>
+          </div>
+
+          <div class="field-block">
+            <label class="field-label">Subir imagen (Photocake) o usar sticker de prueba:</label>
+            <div class="upload-actions-row">
+              <label class="btn-upload-decal" for="decalFileInput">
+                📤 Subir imagen propia
+                <input type="file" id="decalFileInput" accept="image/*" hidden />
+              </label>
+            </div>
+            <div class="stickers-grid" id="stickersGrid"></div>
+          </div>
+
+          <div class="decal-controls-box hidden" id="decalControlsBox">
+            <div class="decal-box-head">
+              <span class="field-label" style="margin:0">Imagen activa en el dulce:</span>
+              <button type="button" class="btn-link-reset danger" id="btnRemoveActiveDecal">🗑️ Eliminar</button>
+            </div>
+            <div class="placed-decals-list" id="placedDecalsList"></div>
+            <div class="decal-btn-row">
+              <button type="button" class="btn-secondary-pill" id="btnToggleMovePanel" aria-pressed="false">
+                ✋ Mover imagen en 3D
+              </button>
+              <button type="button" class="btn-secondary-pill" id="btnCenterDecalTop">
+                🎯 Centrar arriba
+              </button>
+            </div>
+            <div class="slider-row">
+              <label for="decalScaleInput">Tamaño</label>
+              <input type="range" id="decalScaleInput" min="25" max="150" step="5" value="75" />
+              <span id="decalScaleVal">75%</span>
+            </div>
+            <div class="slider-row">
+              <label for="decalRotateInput">Rotación</label>
+              <input type="range" id="decalRotateInput" min="-180" max="180" step="5" value="0" />
+              <span id="decalRotateVal">0°</span>
+            </div>
+          </div>
+
+          <div class="field-block extras-toggles-box">
+            <label class="field-label">Extras Decorativos 3D:</label>
+            <label class="toggle-row">
+              <input type="checkbox" id="toggleFruitsInput" />
+              <span>🍓 Decoración de Frutas Frescas 3D</span>
+            </label>
+            <label class="toggle-row">
+              <input type="checkbox" id="toggleTopperInput" />
+              <span>✨ Cake Topper 3D Personalizado</span>
+            </label>
+            <div class="topper-config-box hidden" id="topperConfigBox">
+              <div class="topper-fields">
+                <input type="text" id="topperTextInput" maxlength="28" value="Feliz Cumpleaños" placeholder="Texto del topper..." aria-label="Texto del Cake Topper" />
+                <select id="topperFinishSelect" aria-label="Acabado del Cake Topper">
+                  <option value="gold">Dorado</option>
+                  <option value="rosegold">Rose Gold</option>
+                  <option value="cacao">Cacao Miski</option>
+                  <option value="silver">Plata</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. Resumen de prototipo, PNG y WhatsApp -->
+        <section class="panel-card" id="card-summary" data-panel="summary">
+          <div class="card-head">
+            <h2>5. Resumen de Prototipo y Pedido</h2>
+          </div>
+
+          <div class="cake-notice-banner" id="cakeNoticeBanner">
+            ⏳ Encargos personalizados con diseño o Photocake: al menos 3 días de anticipación.
+          </div>
+
+          <div class="summary-breakdown" id="summaryBreakdown"></div>
+
+          <div class="field-block">
+            <label class="field-label" for="customerNoteInput">Nota adicional para tu pedido (opcional):</label>
+            <input type="text" id="customerNoteInput" class="text-input" placeholder="Ej. Nombre en el dulce, fecha de entrega o sucursal..." />
+          </div>
+
+          <div class="field-block">
+            <label class="field-label" for="waMessagePreview">Vista previa del mensaje para WhatsApp:</label>
+            <textarea id="waMessagePreview" class="wa-preview-box" rows="6" readonly></textarea>
+          </div>
+
+          <div class="summary-actions">
+            <button type="button" class="btn-export-png" id="btnDownloadPng">
+              📸 Descargar PNG del Diseño 3D
+            </button>
+            <div class="wa-actions-row">
+              <button type="button" class="btn-copy-wa" id="btnCopyWaMessage">📋 Copiar texto</button>
+              <a href="#" target="_blank" rel="noopener noreferrer" class="btn-whatsapp-order" id="btnOpenWhatsapp">
+                💬 Enviar por WhatsApp
+              </a>
+            </div>
+            <p class="action-feedback hidden" id="actionFeedback"></p>
+          </div>
+        </section>
+      </div>
+    </aside>
+  </main>
+
+  <script type="module" src="./js/dulces-3d.js?v=1"></script>
+</body>
+</html>

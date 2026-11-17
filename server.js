@@ -342,6 +342,13 @@ const server = http.createServer(async (req, res) => {
     if (pathname === "/qr" || pathname === "/qr/" || pathname === "/qr.html") {
       return sendFile(res, path.join(ROOT_DIR, "qr.html"), true);
     }
+    if (
+      pathname === "/dulces-3d" ||
+      pathname === "/dulces-3d/" ||
+      pathname === "/dulces-3d.html"
+    ) {
+      return sendFile(res, path.join(ROOT_DIR, "dulces-3d.html"), true);
+    }
 
     // --- STATIC ASSETS ---
     const allowedPrefixes = ["/css/", "/js/", "/assets/", "/data/"];
