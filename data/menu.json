@@ -126,7 +126,7 @@
       "image": null,
       "featured": false,
       "promo": true,
-      "active": true
+      "active": false
     },
     {
       "id": "pan-50-empanadas",
